@@ -3,6 +3,7 @@
 
 #include "pico/stdlib.h"
 
+#include "hardware/clocks.h"
 #include "hardware/sync.h"
 #include "hardware/vreg.h"
 
