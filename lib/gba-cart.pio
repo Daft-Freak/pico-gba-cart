@@ -1,23 +1,28 @@
+.define PUBLIC CS_PIN 26
+.define PUBLIC RD_PIN 25
+.define PUBLIC WR_PIN 24
+.define PUBLIC ADDR_BITS 23 ; all 24 on PGA board
+
 .program gba_rom_cs
 
 ; reads address when ROM CS goes low
 ; assumes CS = GPIO 26
 .wrap_target
-    wait 0 pin 26
+    wait 0 pin CS_PIN
 
-    in pins, 23 ; latch address
+    in pins, ADDR_BITS ; latch address
     wait 0 irq 0 ; wait for last transfer to abort
     in null, 1 ; x2 PIO style
 
-    wait 1 pin 26
+    wait 1 pin CS_PIN
     irq set 0
 .wrap
 
 ; switches pins to output and writes data when RD goes low
 .program gba_rom_rd
 .wrap_target
-    wait 0 pin 26 ; wait for CS
-    wait 0 pin 25 ; wait for RD
+    wait 0 pin CS_PIN ; wait for CS
+    wait 0 pin RD_PIN ; wait for RD
 
     ; data
     pull
@@ -27,7 +32,7 @@
     mov osr, ~null
     out pindirs, 16
 
-    wait 1 pin 25
+    wait 1 pin RD_PIN
 
     ; set input
     mov osr, null [4] ; waiting a little seems required
@@ -37,10 +42,10 @@
 ; reads when WR goes low
 .program gba_rom_wr
 .wrap_target
-    wait 0 pin 26 ; wait for CS
-    wait 0 pin 24 ; wait for WR
+    wait 0 pin CS_PIN ; wait for CS
+    wait 0 pin WR_PIN ; wait for WR
 
     in pins, 16
 
-    wait 1 pin 24
+    wait 1 pin WR_PIN
 .wrap

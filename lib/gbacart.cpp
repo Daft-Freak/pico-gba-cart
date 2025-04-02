@@ -11,10 +11,10 @@
 alignas(4) extern char _binary_gba_rom_gba_start[];
 static auto rom_ptr = _binary_gba_rom_gba_start;
 
-static constexpr int cs_pin = 26;
-static constexpr int rd_pin = 25;
-static constexpr int wr_pin = 24;
-static constexpr int addr_bits = 23; // all 24 on PGA board
+static constexpr int cs_pin = CS_PIN;
+static constexpr int rd_pin = RD_PIN;
+static constexpr int wr_pin = WR_PIN;
+static constexpr int addr_bits = ADDR_BITS;
 
 static uint32_t rom_addr;
 
@@ -62,7 +62,7 @@ static void pio_init() {
     auto offset = rom_cs_offset = pio_add_program(gba_cart_pio, &gba_rom_cs_program);
     auto cfg = gba_rom_cs_program_get_default_config(offset);
 
-    sm_config_set_in_shift(&cfg, false, true, 24);
+    sm_config_set_in_shift(&cfg, false, true, addr_bits + 1);
 
     pio_sm_init(gba_cart_pio, rom_cs_sm, offset, &cfg);
 
