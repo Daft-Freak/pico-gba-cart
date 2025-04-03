@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "gbacart.h"
 
 #include "pico/stdlib.h"
@@ -151,6 +153,13 @@ static void dma_init() {
 }
 
 void gbacart_init() {
+    // copy rom data
+    extern char __gba_rom_data_start;
+    extern char __gba_rom_data_end;
+    extern char __gba_rom_data_init;
+
+    memcpy(&__gba_rom_data_start, &__gba_rom_data_init, &__gba_rom_data_end - &__gba_rom_data_start);
+
     pio_init();
     dma_init();
 

@@ -20,7 +20,7 @@ ExternalProject_Add(gba-rom-build
 add_custom_command(
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/gba/
     OUTPUT gba-rom.o
-    COMMAND ${CMAKE_OBJCOPY} -I binary -O elf32-littlearm -B armv6s-m --set-section-alignment .data=4 gba-rom.gba ${CMAKE_CURRENT_BINARY_DIR}/gba-rom.o
+    COMMAND ${CMAKE_OBJCOPY} -I binary -O elf32-littlearm -B armv6s-m --set-section-alignment .data=4 --rename-section .data=.gba_rom_data gba-rom.gba ${CMAKE_CURRENT_BINARY_DIR}/gba-rom.o
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gba/gba-rom.gba
 )
 
@@ -33,3 +33,10 @@ target_link_libraries(gbacart pico_stdlib hardware_dma hardware_pio)
 target_include_directories(gbacart PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 pico_generate_pio_header(gbacart ${CMAKE_CURRENT_LIST_DIR}/gba-cart.pio)
+
+set(LINKER_SCRIPT_2350 ${CMAKE_CURRENT_LIST_DIR}/memmap_2350.ld PARENT_SCOPE)
+
+function(gbacart_set_linker_script TARGET)
+    set_target_properties(${TARGET} PROPERTIES PICO_TARGET_LINKER_SCRIPT ${LINKER_SCRIPT_2350})
+    pico_add_link_depend(${TARGET} ${LINKER_SCRIPT_2350})
+endfunction()
