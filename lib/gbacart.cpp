@@ -18,8 +18,6 @@ static constexpr int rd_pin = RD_PIN;
 static constexpr int wr_pin = WR_PIN;
 static constexpr int addr_bits = ADDR_BITS;
 
-static uint32_t rom_addr;
-
 // SMs and DMA channels accessed in IRQ handlers should be pre-allocated constants
 static constexpr int rom_cs_sm = 0, rom_rd_sm = 1;
 static int rom_wr_sm;
@@ -27,15 +25,7 @@ static const PIO gba_cart_pio = pio0;
 static uint8_t rom_cs_offset, rom_rd_offset, rom_wr_offset;
 
 static constexpr int rom_read_dma_channel = 0, rom_write_dma_channel = 1;
-static int rom_addr_dma_channel, rom_addr_sniff_dma_channel;
-
-static void __not_in_flash_func(dma_irq_handler)() {
-    dma_sniffer_set_data_accumulator((uint32_t)rom_ptr);
-    dma_channel_acknowledge_irq0(rom_addr_dma_channel);
-
-    // also set up the write channel (less time sensitive)
-    dma_channel_set_write_addr(rom_write_dma_channel, rom_ptr + rom_addr, true);
-}
+static int rom_addr_dma_channel, rom_write_addr_dma_channel;
 
 static void __not_in_flash_func(pio_irq0_handler)() {
     // abort DMA and clear FIFO
@@ -64,9 +54,16 @@ static void pio_init() {
     auto offset = rom_cs_offset = pio_add_program(gba_cart_pio, &gba_rom_cs_program);
     auto cfg = gba_rom_cs_program_get_default_config(offset);
 
-    sm_config_set_in_shift(&cfg, false, true, addr_bits + 1);
+    sm_config_set_in_shift(&cfg, false, true, 32);
 
     pio_sm_init(gba_cart_pio, rom_cs_sm, offset, &cfg);
+
+    // prepare address high bits
+    uint32_t addr_high = uint32_t(rom_ptr) >> (addr_bits + 1);
+    pio_sm_put(gba_cart_pio, rom_cs_sm, addr_high);
+    pio_sm_exec(gba_cart_pio, rom_cs_sm, pio_encode_pull(false, true));
+    pio_sm_exec(gba_cart_pio, rom_cs_sm, pio_encode_out(pio_y, 32));
+    pio_sm_exec(gba_cart_pio, rom_cs_sm, pio_encode_in(pio_y, 32 - (addr_bits + 1)));
 
     // rd
     offset = rom_rd_offset = pio_add_program(gba_cart_pio, &gba_rom_rd_program);
@@ -106,7 +103,7 @@ static void pio_init() {
 static void dma_init() {
     dma_claim_mask(1 << rom_read_dma_channel | 1 << rom_write_dma_channel);
     rom_addr_dma_channel = dma_claim_unused_channel(true);
-    rom_addr_sniff_dma_channel = dma_claim_unused_channel(true);
+    rom_write_addr_dma_channel = dma_claim_unused_channel(true);
 
     // read data
     auto config = dma_channel_get_default_config(rom_read_dma_channel);
@@ -122,34 +119,24 @@ static void dma_init() {
     channel_config_set_dreq(&config, pio_get_dreq(gba_cart_pio, rom_wr_sm, false));
     dma_channel_configure(rom_write_dma_channel, &config, rom_ptr, &gba_cart_pio->rxf[rom_wr_sm], 0x10000, false);
 
-    // read address through sniffer to add base ptr
-    // destination also used for write setup 
+    // transfer address address to trigger  read channel
     config = dma_channel_get_default_config(rom_addr_dma_channel);
     channel_config_set_dreq(&config, pio_get_dreq(gba_cart_pio, rom_cs_sm, false));
     channel_config_set_read_increment(&config, false);
 
-    // chain to sniffer read
-    channel_config_set_chain_to(&config, rom_addr_sniff_dma_channel);
+    // chain to write addr copy
+    channel_config_set_chain_to(&config, rom_write_addr_dma_channel);
 
-    dma_channel_configure(rom_addr_dma_channel, &config, &rom_addr, &gba_cart_pio->rxf[rom_cs_sm], 1, false);
+    dma_channel_configure(rom_addr_dma_channel, &config, &dma_hw->ch[rom_read_dma_channel].al3_read_addr_trig, &gba_cart_pio->rxf[rom_cs_sm], 1, false);
 
-    // transfer sniffed address to trigger read channel
-    config = dma_channel_get_default_config(rom_addr_sniff_dma_channel);
+    // transfer address to write channel too
+    config = dma_channel_get_default_config(rom_write_addr_dma_channel);
     channel_config_set_read_increment(&config, false);
 
-    // chain to addr read (keep the address reads going forever)
+    // chain back to addr read (keep the address reads going forever)
     channel_config_set_chain_to(&config, rom_addr_dma_channel);
 
-    dma_channel_configure(rom_addr_sniff_dma_channel, &config, &dma_hw->ch[rom_read_dma_channel].al3_read_addr_trig, &dma_hw->sniff_data, 1, false);
-
-    // sniffer
-    dma_sniffer_enable(rom_addr_dma_channel, 0xF/*addition*/, true);
-    dma_sniffer_set_data_accumulator((uint32_t)rom_ptr);
-
-    // irq to reset sniff
-    dma_channel_set_irq0_enabled(rom_addr_dma_channel, true);
-    irq_set_exclusive_handler(DMA_IRQ_0, dma_irq_handler);
-    irq_set_enabled(DMA_IRQ_0, true);
+    dma_channel_configure(rom_write_addr_dma_channel, &config, &dma_hw->ch[rom_write_dma_channel].al2_write_addr_trig, &dma_hw->ch[rom_read_dma_channel].al3_read_addr_trig, 1, false);
 }
 
 void gbacart_init() {

@@ -7,6 +7,7 @@
 
 ; reads address when ROM CS goes low
 ; assumes CS = GPIO 26
+; Y should be preloaded with high bits of address
 .wrap_target
     wait 0 pin CS_PIN
 
@@ -16,6 +17,7 @@
 
     wait 1 pin CS_PIN
     irq set 0
+    in y, (32 - (ADDR_BITS + 1)) ; prepare high bits for next addr
 .wrap
 
 ; switches pins to output and writes data when RD goes low
