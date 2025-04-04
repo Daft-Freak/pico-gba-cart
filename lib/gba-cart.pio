@@ -31,14 +31,12 @@
     out pins, 16
 
     ; set output
-    mov osr, ~null
-    out pindirs, 16
+    mov pindirs, ~null 
 
-    wait 1 pin RD_PIN
+    wait 1 pin RD_PIN [5] ; give the GBA time to read
 
     ; set input
-    mov osr, null [4] ; waiting a little seems required
-    out pindirs, 16
+    mov pindirs, null 
 .wrap
 
 ; reads when WR goes low
