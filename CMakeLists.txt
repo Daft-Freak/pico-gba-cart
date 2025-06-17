@@ -30,3 +30,6 @@ target_link_libraries(pico-gba-cart pico_stdlib gbacart)
 
 pico_add_extra_outputs(pico-gba-cart)
 
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pico-gba-cart.uf2
+	DESTINATION bin
+)
