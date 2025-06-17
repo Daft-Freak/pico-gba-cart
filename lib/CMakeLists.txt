@@ -31,7 +31,7 @@ add_custom_command(
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/gba/bin/
     OUTPUT gba-rom.o
     COMMAND ${CMAKE_OBJCOPY} -I binary -O elf32-littlearm -B armv6s-m --set-section-alignment .data=4 gba-rom.gba ${CMAKE_CURRENT_BINARY_DIR}/gba-rom.o
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gba/bin/gba-rom.gba
+    DEPENDS gba-rom-build ${CMAKE_CURRENT_BINARY_DIR}/gba/bin/gba-rom.gba
 )
 
 add_library(gbacart STATIC
