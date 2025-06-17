@@ -1,6 +1,17 @@
 
 if(NOT DEFINED GBA_TOOLCHAIN_FILE)
-    message(FATAL_ERROR "Set GBA_TOOLCHAIN_FILE! (path to gba-toolchain/arm-gba-toolchain.cmake)")
+    message("Downloading GBA toolchain...")
+
+    include(FetchContent)
+
+    FetchContent_Declare(gba-toolchain
+        GIT_REPOSITORY https://github.com/felixjones/gba-toolchain
+        GIT_TAG 3.0
+    )
+
+    FetchContent_MakeAvailable(gba-toolchain)
+
+    set(GBA_TOOLCHAIN_FILE ${gba-toolchain_SOURCE_DIR}/arm-gba-toolchain.cmake)
 endif()
 
 # build gba ROM
