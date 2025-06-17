@@ -6,12 +6,12 @@ if(NOT DEFINED GBA_TOOLCHAIN_FILE)
 
     FetchContent_Declare(gba-toolchain
         GIT_REPOSITORY https://github.com/felixjones/gba-toolchain
-        GIT_TAG 3.0
+        GIT_TAG 28a92c95b9b3040e7871ce0d46098d81d9464528 #from experimental branch
     )
 
     FetchContent_MakeAvailable(gba-toolchain)
 
-    set(GBA_TOOLCHAIN_FILE ${gba-toolchain_SOURCE_DIR}/arm-gba-toolchain.cmake)
+    set(GBA_TOOLCHAIN_FILE ${gba-toolchain_SOURCE_DIR}/cmake/gba.toolchain.cmake)
 endif()
 
 # build gba ROM
@@ -21,7 +21,7 @@ ExternalProject_Add(gba-rom-build
     SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/../gba
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/gba
 
-    CMAKE_ARGS "-DCMAKE_TOOLCHAIN_FILE=${GBA_TOOLCHAIN_FILE}" -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=${CMAKE_EXPORT_COMPILE_COMMANDS} -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+    CMAKE_ARGS "-DCMAKE_TOOLCHAIN_FILE=${GBA_TOOLCHAIN_FILE}" -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=${CMAKE_EXPORT_COMPILE_COMMANDS}
     BUILD_ALWAYS TRUE
     BUILD_BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/gba/gba-rom.gba
 

@@ -4,13 +4,13 @@
 #include <string.h>
 
 #include <seven/prelude.h>
-#include <seven/hw/bios/memory.h>
-#include <seven/hw/dma.h>
-#include <seven/hw/timer.h>
-#include <seven/hw/video.h>
-#include <seven/hw/video/bg_bitmap.h>
-#include <seven/hw/video/bg_transform.h>
-#include <seven/hw/waitstate.h>
+#include <seven/bios.h>
+#include <seven/dma.h>
+#include <seven/timer.h>
+#include <seven/video.h>
+#include <seven/video/bg_bitmap.h>
+#include <seven/video/bg_transform.h>
+#include <seven/waitstate.h>
 
 // libseven doesn't have sound support
 #define REG_SOUNDCNT_H VOLADDR(0x04000082, uint16_t)
@@ -20,8 +20,8 @@
 #define REG_FIFO_B     VOLADDR(0x040000A4, uint32_t)
 
 enum SoundControlH {
-    #define BF_SOUND_1_4_VOLUME_OFFSET 0
-    #define BF_SOUND_1_4_VOLUME_LENGTH 2
+    #define BF_SOUND_1_4_VOLUME_OFF 0
+    #define BF_SOUND_1_4_VOLUME_LEN 2
 
     #define SOUND_1_4_VOLUME(n) BITFIELD(SOUND_1_4_VOLUME, (n))
 
@@ -69,6 +69,10 @@ struct CartAPI {
     volatile uint16_t buttons;
 };
 
+// storage for API
+__attribute ((section(".crt0.postheader")))
+uint8_t api_data[32];
+
 static bool audio_started = false;
 static int audio_buf = 0;
 
@@ -90,10 +94,10 @@ int main() {
     //REG_WAITCNT = WAIT_ROM_N_3 | WAIT_ROM_S_1 | WAIT_PREFETCH_ENABLE;
     REG_WAITCNT = WAIT_ROM_S_1 | WAIT_PREFETCH_ENABLE;
 
-    REG_DISPCNT = VIDEO_MODE_BITMAP | VIDEO_BG2_ENABLE;
+    REG_DISPCNT = DISPLAY_MODE_BITMAP | DISPLAY_BG2_ENABLE;
 
     // enable irq/vblank
-    irqInitDefault();
+    irqInitVectored();
     irqEnable(IRQ_VBLANK);
     REG_DISPSTAT = LCD_VBLANK_IRQ_ENABLE;
 
@@ -115,7 +119,7 @@ int main() {
         REG_TM1CNT = TIMER_FREQ_CASCADE | TIMER_IRQ_ENABLE | TIMER_ENABLE;
 
         irqEnable(IRQ_TIMER_1);
-        irqHandlerSet(IRQ_TIMER_1, audio_timer_irq);
+        irqCallbackSet(IRQ_TIMER_1, audio_timer_irq);
     }
 
     while(true) {
@@ -140,7 +144,7 @@ int main() {
             uint16_t *in = fb_ptr;
 
             for(int i = 0; i < cart_api->fb_height; i++) {
-                struct DMA screen_dma = {in, out, 240, DMA_16BIT | DMA_ENABLE};
+                struct DmaTransfer screen_dma = {in, out, 240, DMA_16BIT | DMA_ENABLE};
                 dmaSet(3, screen_dma);
                 out += 240;
                 in += 240;
